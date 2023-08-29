@@ -40,6 +40,7 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
     private JLabel channelNameLabel;
     private DefaultListModel<String> channelListModel;
     private Map<String, String> channelTopics = new HashMap<>();
+    private Map<String, StringBuilder> channelMessages = new HashMap<>();
     private JList<String> channelList;
 
     private static final DateTimeFormatter timeFormatter = new DateTimeFormatterBuilder()
@@ -68,32 +69,6 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
     }
 
 
-    // public static void main(String[] args) {
-
-    //     if (args.length == 1) {								
-	// 		try {
-	// 			System.out.println("Launching ChatClient with config file " + args[0]);
-	// 			ChatClient client = new ChatClient();
-	// 			client.initUI(args[0]);
-	// 		} catch (Exception e) {
-	// 			System.out.println("Failed to run the ChatClient");
-	// 			System.out.println("Reason: " + e.getLocalizedMessage());
-	// 			e.printStackTrace();
-	// 		}
-	// 	} else {
-	// 		System.out.println("Usage: java -jar chat-client-jar-file chatclient.properties");
-	// 		System.out.println("Where chatclient.properties is the client configuration file");
-	// 	}
-
-    //     // SwingUtilities.invokeLater(() -> {
-    //     //     try {
-    //     //         new ChatClient().initUI();
-    //     //     } catch (Exception e) {
-    //     //         e.printStackTrace();
-    //     //     }
-    //     // });
-    // }
-
     private ChatClient(String configFile) {
         try {
             readConfiguration(configFile);
@@ -108,17 +83,8 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
 
 	private void initUI() {
 
-        // try {
-        //     readConfiguration(configFile);
-        //     tcpClient = new ChatTCPClient(this);
-        //     new Thread(tcpClient).start();
-        // } catch (Exception e) {
-        //     displayMessage("Failed to run the ChatClient\nReason: " + e.getLocalizedMessage(), Color.RED);
-        //     e.printStackTrace();
-		// 	e.getMessage();
-        // }
 
-        //while (tcpClient.isConnected()){
+        //while (tcpClient.isConnected()) {
             //System.out.println("whilen sisäl");
             try {
                 setTitle("Swing Chat Client");
@@ -224,12 +190,14 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                 System.out.println("Error : " + e.getMessage());
             }
 
-            if (tcpClient != null){
-                    tcpClient.close();
-            }
+        //}    
 
-            System.out.println("Bye!");
-        //}
+        if (tcpClient != null){
+                tcpClient.close();
+        }
+
+        System.out.println("Bye!");
+        
         
     }
 
@@ -271,11 +239,14 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                     tcpClient.changeChannelTo(newChannelName);
                     channeltopicLabel.setText("Channel Topic: " + newTopic);
                     tcpClient.changeTopicTo(newTopic);
-                    
 
                     // Update channelListModel
                     channelListModel.addElement(newChannelName);
                     channelTopics.put(newChannelName, newTopic);
+
+                    channelMessages.put(newChannelName, new StringBuilder());
+                    
+                    chatArea.setText("");
 
     
                     nameFrame.dispose();
@@ -296,12 +267,18 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
 
     }
 
-    private void updateChannelLabels(String channelName) {
-        // Here you would need a way to get the topic of the selected channel.
-        // For this example, I assume you have a Map<String, String> to store channel topics.
-        String selectedTopic = channelTopics.get(channelName); // Replace channelTopics with your actual data structure
+    private void updateChannelLabels(String selectedChannel) {
+        
+        String selectedTopic = channelTopics.get(selectedChannel); 
+
+        //clear the chatarea
+        chatArea.setText("");
     
-        channelNameLabel.setText("Current Channel: " + channelName);
+        //display messages for the selected channel
+        StringBuilder channelMessageBuilder = channelMessages.getOrDefault(selectedChannel, new StringBuilder());
+        chatArea.append(channelMessageBuilder.toString());
+
+        channelNameLabel.setText("Current Channel: " + selectedChannel);
         channeltopicLabel.setText("Channel Topic: " + selectedTopic);
     }
 
@@ -359,10 +336,14 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                     String currentTimeUTC = java.time.LocalTime.now(java.time.ZoneOffset.UTC).format(timeFormatter);
                     String formattedMessage = "[" + currentTimeUTC + "] You: " + message;
 
+
+                    StringBuilder channelMessageBuilder = channelMessages.getOrDefault(selectedChannel, new StringBuilder());
+                    channelMessageBuilder.append(formattedMessage).append("\n");
+                    channelMessages.put(selectedChannel, channelMessageBuilder);
+
                     tcpClient.postChatMessage(formattedMessage);
-				    displayMessage( " " + formattedMessage, Color.BLACK);
+                    displayMessage(" " + formattedMessage, Color.BLACK);
                 }
-                
 				
             } 
         } 
