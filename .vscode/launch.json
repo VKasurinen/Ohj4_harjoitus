@@ -23,7 +23,7 @@
             "request": "launch",
             "mainClass": "oy.tol.chatclient.ChatClient",
             "projectName": "ChatClient",
-            "args": ["/Users/anttijuustila/workspace/O4/O4-client/chatclient.properties"]
+            "args": ["F:/Gitlabrepo/Harjoitustyö_ohj4/O4-client/chatclient.properties"]
         }
     ]
 }

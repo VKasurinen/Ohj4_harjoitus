@@ -1,66 +1,48 @@
 package oy.tol.chatclient;
 
-import java.io.Console;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Properties;
-
 import static java.time.temporal.ChronoField.HOUR_OF_DAY;
 import static java.time.temporal.ChronoField.MINUTE_OF_HOUR;
 import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
-import com.diogonunes.jcolor.Ansi;
-import com.diogonunes.jcolor.Attribute;
-
-import oy.tol.chat.ChangeTopicMessage;
-import oy.tol.chat.ChatMessage;
-import oy.tol.chat.ErrorMessage;
-import oy.tol.chat.ListChannelsMessage;
 import oy.tol.chat.Message;
-import oy.tol.chat.StatusMessage;
+import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
-/**
- * ChatClient is the console based UI for the ChatServer. It profides the
- * necessary functionality for chatting. The actual comms with the ChatServer
- * happens in the ChatHttpClient class.
- */
-public class ChatClient implements ChatClientDataProvider {
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
-	private static final String SERVER = "localhost:10000";
-	private static final String CMD_NICK = "/nick";
-	private static final String CMD_JOIN = "/join";
-	private static final String CMD_LIST = "/list";
-	private static final String CMD_TOPIC = "/topic";
-	private static final String CMD_COLOR = "/color";
-	private static final String CMD_HELP = "/help";
-	private static final String CMD_INFO = "/info";
-	private static final String CMD_EXIT = "/exit";
+public class ChatClient extends JFrame implements ChatClientDataProvider {
 
-	private String currentServer = SERVER; // URL of the server without paths.
-	private int serverPort = 10000; // The server port listening to client connections.
-	private String nick = null; // Nickname, user can change the name visible in chats.
-	private String currentChannel = "main";
-	private ChatTCPClient tcpClient = null; // Client handling the requests & responses.
+    private static final String SERVER = "localhost:10000";
+	private int serverPort = 10000;
+	private String currentChannel = "Main";
+	private String currentServer = SERVER;
 	private boolean running = true;
 
-	private static boolean useColorOutput = false;
+    private ChatTCPClient tcpClient = null;
+	private static final String nick = "Väinö";
+    private JTextArea chatArea;
+    private JTextField inputField;
+    private JButton sendButton;
+    private JLabel namLabel;
+    private JLabel channeltopicLabel;
+    private JLabel channelNameLabel;
+    private DefaultListModel<String> channelListModel;
+    private Map<String, String> channelTopics = new HashMap<>();
+    private JList<String> channelList;
 
-	public static final Attribute colorDate = Attribute.GREEN_TEXT();
-	public static final Attribute colorOwnNick = Attribute.BRIGHT_BLUE_TEXT();
-	public static final Attribute colorMsg = Attribute.CYAN_TEXT();
-	public static final Attribute colorError = Attribute.BRIGHT_RED_TEXT();
-	public static final Attribute colorInfo = Attribute.YELLOW_TEXT();
-	public static final Attribute colorOtherNick = Attribute.BRIGHT_YELLOW_TEXT();
-	public static final Attribute fromServerInfo = Attribute.BRIGHT_BLUE_TEXT();
-	public static final Attribute colorPrivateMsg = Attribute.GREEN_BACK();
-
-	private static final DateTimeFormatter timeFormatter = new DateTimeFormatterBuilder()
+    private static final DateTimeFormatter timeFormatter = new DateTimeFormatterBuilder()
 			.appendValue(HOUR_OF_DAY, 2)
 			.appendLiteral(':')
 			.appendValue(MINUTE_OF_HOUR, 2)
@@ -69,230 +51,330 @@ public class ChatClient implements ChatClientDataProvider {
 			.appendValue(SECOND_OF_MINUTE, 2)
 			.toFormatter();
 
-	public static void main(String[] args) {
-		if (args.length == 1) {								
-			try {
-				System.out.println("Launching ChatClient with config file " + args[0]);
-				ChatClient client = new ChatClient();
-				client.run(args[0]);
-			} catch (Exception e) {
-				System.out.println("Failed to run the ChatClient");
-				System.out.println("Reason: " + e.getLocalizedMessage());
-				e.printStackTrace();
-			}
-		} else {
-			System.out.println("Usage: java -jar chat-client-jar-file chatclient.properties");
-			System.out.println("Where chatclient.properties is the client configuration file");
-		}
+
+    public static void main(String[] args) {
+        if (args.length == 1) {
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    new ChatClient(args[0]).initUI();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+        } else {
+            System.out.println("Usage: java -jar chat-client-jar-file chatclient.properties");
+            System.out.println("Where chatclient.properties is the client configuration file");
+        }
+    }
+
+
+    // public static void main(String[] args) {
+
+    //     if (args.length == 1) {								
+	// 		try {
+	// 			System.out.println("Launching ChatClient with config file " + args[0]);
+	// 			ChatClient client = new ChatClient();
+	// 			client.initUI(args[0]);
+	// 		} catch (Exception e) {
+	// 			System.out.println("Failed to run the ChatClient");
+	// 			System.out.println("Reason: " + e.getLocalizedMessage());
+	// 			e.printStackTrace();
+	// 		}
+	// 	} else {
+	// 		System.out.println("Usage: java -jar chat-client-jar-file chatclient.properties");
+	// 		System.out.println("Where chatclient.properties is the client configuration file");
+	// 	}
+
+    //     // SwingUtilities.invokeLater(() -> {
+    //     //     try {
+    //     //         new ChatClient().initUI();
+    //     //     } catch (Exception e) {
+    //     //         e.printStackTrace();
+    //     //     }
+    //     // });
+    // }
+
+    private ChatClient(String configFile) {
+        try {
+            readConfiguration(configFile);
+            tcpClient = new ChatTCPClient(this);
+            new Thread(tcpClient).start();
+        } catch (Exception e) {
+            displayMessage("Failed to run the ChatClient\nReason: " + e.getLocalizedMessage(), Color.RED);
+            e.printStackTrace();
+            e.getMessage();
+        }
+    }
+
+	private void initUI() {
+
+        // try {
+        //     readConfiguration(configFile);
+        //     tcpClient = new ChatTCPClient(this);
+        //     new Thread(tcpClient).start();
+        // } catch (Exception e) {
+        //     displayMessage("Failed to run the ChatClient\nReason: " + e.getLocalizedMessage(), Color.RED);
+        //     e.printStackTrace();
+		// 	e.getMessage();
+        // }
+
+        //while (tcpClient.isConnected()){
+            //System.out.println("whilen sisäl");
+            try {
+                setTitle("Swing Chat Client");
+                setDefaultCloseOperation(EXIT_ON_CLOSE);
+                setSize(800, 600);
+                channelTopics.put("Main", "Everything");
+
+                //Creating menupanel to the left side.
+                JPanel menuPanel = new JPanel();
+                menuPanel.setLayout(new BoxLayout(menuPanel, BoxLayout.Y_AXIS));
+                
+
+                //Buttons for NAME and NEW CHANNEL and actions for them
+                JButton button1 = new JButton("Name");
+                JButton button2 = new JButton("New Channel");
+                
+                button1.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e){
+                        openNameWindow();
+                    }
+                });
+
+                button2.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e){
+                        newChannel();
+                    }
+                });
+                //Channelbox code
+                //updateChannelLabels(currentChannel);
+                channelListModel = new DefaultListModel<>();
+                channelListModel.addElement(currentChannel);
+                channelList = new JList<>(channelListModel);
+                channelList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+                JScrollPane listScrollPane = new JScrollPane(channelList);
+                
+
+                channelList.addListSelectionListener(new ListSelectionListener() {
+                @Override
+                public void valueChanged(ListSelectionEvent e) {
+                    if (!e.getValueIsAdjusting()) {
+                        int selectedIndex = channelList.getSelectedIndex();
+                        if (selectedIndex >= 0 && selectedIndex < channelListModel.size()) {
+                            String selectedChannel = channelListModel.getElementAt(selectedIndex);
+                            updateChannelLabels(selectedChannel);
+                        }
+                    }
+                }
+                });
+
+
+                menuPanel.add(button1);
+                menuPanel.add(button2);
+                menuPanel.add(listScrollPane);
+
+                add(menuPanel, BorderLayout.WEST);
+
+                //Creating labels for channel topic and channel name. 
+                channeltopicLabel = new JLabel("Channel Topic: ");
+                channelNameLabel = new JLabel("Current Channel: "); // Replace with actual channel name
+                
+                //Putting the labels in a box so they can be next to each other.
+                JPanel labelsPanel = new JPanel();
+                labelsPanel.setLayout(new BoxLayout(labelsPanel, BoxLayout.X_AXIS));
+                labelsPanel.add(channelNameLabel);
+                labelsPanel.add(Box.createHorizontalStrut(300)); // Add some spacing between labels
+                labelsPanel.add(channeltopicLabel);
+                labelsPanel.setBorder(BorderFactory.createEmptyBorder(10, 150, 0, 0)); // Adding padding
+                add(labelsPanel, BorderLayout.NORTH);
+
+                //initializing chatarea for sending messages
+                chatArea = new JTextArea();
+                chatArea.setEditable(false);
+                JScrollPane scrollPane = new JScrollPane(chatArea);
+                add(scrollPane, BorderLayout.CENTER);
+
+                inputField = new JTextField(30);
+                sendButton = new JButton("Send");
+                sendButton.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        sendMessage();
+                    }
+                });
+
+                //Putting name label next to textfield
+                JPanel inputPanel = new JPanel();
+                JPanel namePanel = new JPanel();
+
+                namLabel = new JLabel("Name: ");
+                namePanel.add(namLabel);
+                inputPanel.add(namePanel, BorderLayout.WEST);
+                inputPanel.add(inputField, BorderLayout.CENTER);
+                inputPanel.add(sendButton, BorderLayout.EAST);
+                add(inputPanel, BorderLayout.SOUTH);
+
+                setVisible(true);
+
+                
+
+            } catch (Exception e){
+                System.out.println("Error : " + e.getMessage());
+            }
+
+            if (tcpClient != null){
+                    tcpClient.close();
+            }
+
+            System.out.println("Bye!");
+        //}
+        
+    }
+
+    public void displayGUI() {
+        SwingUtilities.invokeLater(() -> setVisible(true));
+    }
+
+
+
+    //method for creating new channel and topic
+    private void newChannel(){
+        JFrame nameFrame = new JFrame("Change channel name");
+        nameFrame.setSize(300, 175);
+    
+        JPanel channelPanel = new JPanel();
+        channelPanel.setLayout(new FlowLayout(FlowLayout.LEFT)); 
+    
+        JLabel channelLabel = new JLabel("Enter new channel name: ");
+        JTextField channelField = new JTextField(20);
+
+        JLabel topicLabel = new JLabel("Enter new channel topic: ");
+        JTextField topicField = new JTextField(20);
+
+        JButton saveButton = new JButton("Save");
+    
+        saveButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String newChannelName = channelField.getText();
+                String newTopic = topicField.getText();
+    
+                // Update labels
+                if (newChannelName.isEmpty()) {
+                    displayMessage("Error: Channel name cannot be empty", Color.RED);
+                } else if (newTopic.isEmpty()){
+                    displayMessage("Error: Channel topic cannot be empty", Color.RED);
+                } else {
+                    channelNameLabel.setText("Current Channel: " + newChannelName);
+                    tcpClient.changeChannelTo(newChannelName);
+                    channeltopicLabel.setText("Channel Topic: " + newTopic);
+                    tcpClient.changeTopicTo(newTopic);
+                    
+
+                    // Update channelListModel
+                    channelListModel.addElement(newChannelName);
+                    channelTopics.put(newChannelName, newTopic);
+
+    
+                    nameFrame.dispose();
+                }
+                //updateChannelLabels(newChannelName);
+    
+            }
+        });
+
+        channelPanel.add(channelLabel);
+        channelPanel.add(channelField);
+        channelPanel.add(topicLabel);
+        channelPanel.add(topicField);
+        channelPanel.add(saveButton);
+    
+        nameFrame.add(channelPanel);
+        nameFrame.setVisible(true);
+
+    }
+
+    private void updateChannelLabels(String channelName) {
+        // Here you would need a way to get the topic of the selected channel.
+        // For this example, I assume you have a Map<String, String> to store channel topics.
+        String selectedTopic = channelTopics.get(channelName); // Replace channelTopics with your actual data structure
+    
+        channelNameLabel.setText("Current Channel: " + channelName);
+        channeltopicLabel.setText("Channel Topic: " + selectedTopic);
+    }
+
+
+    private void changeNick(String newNick){
+		namLabel.setText(newNick + ":");
+        
 	}
 
-	/**
-	 * Runs the show: - Creates the http client - displays the menu - handles
-	 * commands until user enters command /exit.
-	 */
-	public void run(String configFile) throws IOException {
-		println("Reading configuration...", colorInfo);
-		readConfiguration(configFile);
-		if (null == nick) {
-			println("!! Provide a nick in settings", colorError);
-		}
-		tcpClient = new ChatTCPClient(this);
-		new Thread(tcpClient).start();
-		printCommands();
-		printInfo();
-		Console console = System.console();
-		while (running && tcpClient.isConnected()) {
-			try {
-				printPrompt(LocalDateTime.now(), nick, "", colorMsg);
-				String command = console.readLine().trim();
-				if (!running) {
-					break;
-				}
-				int spaceIndex = command.indexOf(" ");
-				String commandString = null;
-				String commandParameters = null;
-				if (spaceIndex > 0) {
-					commandString = command.substring(0, spaceIndex).trim();
-					commandParameters = command.substring(spaceIndex+1).trim();
-				} else {
-					commandString = command;
-				}	
-				switch (commandString) {
-					case CMD_NICK:
-						changeNick(console, commandParameters);
-						break;
-					case CMD_JOIN:
-						changeChannel(console, commandParameters);
-						break;
-					case CMD_LIST:
-						listChannels();
-						break;
-					case CMD_TOPIC:
-						changeTopic(console, commandParameters);
-						break;
-					case CMD_COLOR:
-						useColorOutput = !useColorOutput;
-						println("Using color in output: " + (useColorOutput ? "yes" : "no"), colorInfo);
-						break;
-					case CMD_HELP:
-					case "/?":
-						printCommands();
-						break;
-					case CMD_INFO:
-					case "/i":
-						printInfo();
-						break;
-					case CMD_EXIT:
-						running = false;
-						if (null != tcpClient) tcpClient.close();
-						tcpClient = null;
-						break;
-					default:
-						if (command.length() > 0) { 
-							if (!command.startsWith("/")) {
-								postMessage(command);
-							} else {
-								println(" ** ERROR: " + command + " is not a valid command", colorError);
-							}
-						}
-						break;
-				}
-			} catch (Exception e) {
-				println(" *** ERROR : " + e.getMessage(), colorError);
-			}
-		}
-		if (null != tcpClient) {			
-			tcpClient.close();
-		}
-		println("Bye!", colorInfo);
-	}
+    //method for changing nick
+    private void openNameWindow() {
+        JFrame nameFrame = new JFrame("Change Name");
+        nameFrame.setSize(300, 150);
+    
+        JPanel namePanel = new JPanel();
+        namePanel.setLayout(new FlowLayout(FlowLayout.LEFT)); 
+    
+        JLabel nameLabel = new JLabel("Enter new name: ");
+        JTextField nameField = new JTextField(20);
+        JButton saveButton = new JButton("Save");
+    
+        saveButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String newName = nameField.getText();
+                if (!newName.isEmpty()){
+                    changeNick(newName); 
+                    nameFrame.dispose();
+                } else {
+                    displayMessage("Error: Name cannot be empty", Color.RED);
+                }
+                    
+            } 
+        });
+    
+        namePanel.add(nameLabel);
+        namePanel.add(nameField);
+        namePanel.add(saveButton);
+    
+        nameFrame.add(namePanel);
+        nameFrame.setVisible(true);
+    }
 
-	private void changeTopic(Console console, String topic) {
-		String newTopic;
-		if (null == topic) {
-			print("Change the channel topic > ", colorInfo);
-			newTopic = console.readLine().trim().toLowerCase();
-		} else {
-			newTopic = topic;
-		}
-		if (newTopic.length() > 0) {
-			tcpClient.changeTopicTo(newTopic);
-		}
-	}
+	
+   
+    private void sendMessage() {
+        String message = inputField.getText().trim();
+        if (!message.isEmpty()) {
+            if (nick != null) {
+                String selectedChannel = channelList.getSelectedValue();
+                if (selectedChannel == null){
+                    displayMessage("Error: No channel selected.", Color.RED);
+                } else {
 
-	private void changeChannel(Console console, String channel) {
-		String newChannel;
-		if (null == channel) {
-			print("Change to channel > ", colorInfo);
-			newChannel = console.readLine().trim().toLowerCase();
-		} else {
-			newChannel = channel;
-		}
-		if (newChannel.length() > 0) {
-			tcpClient.changeChannelTo(newChannel);	
-			currentChannel = newChannel;
-		}
-	}
+                    String currentTimeUTC = java.time.LocalTime.now(java.time.ZoneOffset.UTC).format(timeFormatter);
+                    String formattedMessage = "[" + currentTimeUTC + "] You: " + message;
 
-	private void listChannels() {
-		tcpClient.listChannels();	
-	}
+                    tcpClient.postChatMessage(formattedMessage);
+				    displayMessage( " " + formattedMessage, Color.BLACK);
+                }
+                
+				
+            } 
+        } 
+        inputField.setText("");
+    }
 
+    private void displayMessage(String message, Color color) {
+        chatArea.append(message + "\n");
+		
+    }
 
-	/**
-	 * User wants to change the nick, so ask it.
-	 * 
-	 * @param console
-	 */
-	private void changeNick(Console console, String newNick) {
-		if (null == newNick) {
-			print("Enter nick > ", colorInfo);
-			String changedNick = console.readLine().trim();
-			if (changedNick.length() > 0) {
-				nick = changedNick;
-			}	
-		} else {
-			if (newNick.length() > 0) {
-				nick = newNick;
-			}
-		}
-	}
-
-	/**
-	 * Sends a new chat message to the server. User must be logged in to the server.
-	 * 
-	 * @param message The chat message to send.
-	 */
-	private void postMessage(String message) {
-		if (null != nick) {
-			tcpClient.postChatMessage(message);
-		} else {
-			println("Must set the nick before posting messages!", colorError);
-		}
-	}
-
-	/**
-	 * Print out the available commands.
-	 */
-	private void printCommands() {
-		println("--- O4 Chat Client Commands ---", colorInfo);
-		println("/nick      -- Specify a nickname to use in chat server", colorInfo);
-		println("/join      -- Specify a channel to switch to in the chat server", colorInfo);
-		println("/list      -- List the channels currently available in the chat server", colorInfo);
-		println("/topic     -- Set a topic for the current channel", colorInfo);
-		println("/color     -- Toggles color output on/off", colorInfo);
-		println("/help, /?  -- Prints out this information", colorInfo);
-		println("/info, /i  -- Prints out settings and user information", colorInfo);
-		println("/exit      -- Exit the client app", colorInfo);
-		println(" > To chat, write a message and press enter to send it.", colorInfo);
-		println(" > Send direct message to nick by starting the message with @nick ", colorInfo);
-	}
-
-	/**
-	 * Prints out the configuration of the client.
-	 */
-	private void printInfo() {
-		println("Server    : " + currentServer, colorInfo);
-		println("Port      : " + serverPort, colorInfo);
-		println("Channel   : " + currentChannel, colorInfo);
-		println("Nick      : " + nick, colorInfo);
-		println("Use color : " + (useColorOutput ? "yes" : "no"), colorInfo);
-	}
-
-	private void printPrompt(LocalDateTime timeStamp, String user, String message, Attribute withAttribute) {
-		String dateStr = timeFormatter.format(timeStamp);
-		String prompt = String.format("%n[%8s @%s] ", dateStr, currentChannel);
-		print(prompt, colorInfo);
-		prompt = String.format("%8s > ", user);
-		if (this.nick.equals(user)) {
-			print(prompt, colorOwnNick);
-			if (message.length() > 0) print(message, withAttribute);
-		} else if (user.equals("SERVER")) {
-			print(prompt, colorInfo);
-			if (message.length() > 0) print(message, withAttribute);
-		} else {
-			print(prompt, colorOtherNick);
-			if (message.length() > 0) print(message, withAttribute);
-		}
-	}
-
-	public static void print(String item, Attribute withAttribute) {
-		if (useColorOutput) {
-			System.out.print(Ansi.colorize(item, withAttribute));
-		} else {
-			System.out.print(item);
-		}
-	}
-
-	public static void println(String item, Attribute withAttribute) {
-		if (useColorOutput) {
-			System.out.println(Ansi.colorize(item, withAttribute));
-		} else {
-			System.out.println(item);
-		}
-	}
-
-	private void readConfiguration(String configFileName) throws FileNotFoundException, IOException {
+    private void readConfiguration(String configFileName) throws FileNotFoundException, IOException {
 		System.out.println("Using configuration: " + configFileName);
 		File configFile = new File(configFileName);
 		Properties config = new Properties();
@@ -305,96 +387,39 @@ public class ChatClient implements ChatClientDataProvider {
 			serverPort = Integer.parseInt(components[1]);
 			currentServer = components[0];
 		} else {
-			println("Invalid server address in settings", ChatClient.colorError);
+			System.out.println("Error");
 		}
-		nick = config.getProperty("nick", "");
-		if (config.getProperty("usecolor", "false").equalsIgnoreCase("true")) {
-			useColorOutput = true;
-		}
+		// nick = config.getProperty("nick", "");
+		// if (config.getProperty("usecolor", "false").equalsIgnoreCase("true")) {
+		// 	useColorOutput = true;
+		// }
 		istream.close();
 	}
-	
-	/*
-	 * Implementation of the ChatClientDataProvider interface. The ChatHttpClient
-	 * calls these methods to get configuration info needed in communication with
-	 * the server.
-	 */
 
-	@Override
-	public String getServer() {
-		return currentServer;
-	}
+    @Override
+    public String getServer() {
+        return currentServer;
+    }
 
-	@Override
-	public int getPort() {
-		return serverPort;
-	}
+    @Override
+    public int getPort() {
+        return serverPort;
+    }
 
-	@Override
-	public String getNick() {
-		return nick;
-	}
+    @Override
+    public String getNick() {
+        return nick;
+    }
 
-	@Override
-	public boolean handleReceived(Message message) {
-		boolean continueReceiving = true;
-		switch (message.getType()) {
-			case Message.CHAT_MESSAGE: {
-				if (message instanceof ChatMessage) {
-					ChatMessage msg = (ChatMessage)message;
-					if (msg.isDirectMessage()) {
-						printPrompt(msg.getSent(), msg.getNick(), "[private] " + msg.getMessage(), colorPrivateMsg);
-					} else {
-						printPrompt(msg.getSent(), msg.getNick(), msg.getMessage(), colorOtherNick);
-					}
-				}
-				break;
-			}
+    @Override
+    public boolean handleReceived(Message message) {
+        // Handle received messages and update GUI accordingly
+        return true;
+    }
 
-			case Message.LIST_CHANNELS: {
-				ListChannelsMessage msg = (ListChannelsMessage)message;
-				List<String> channels = msg.getChannels();
-				if (null != channels) {
-					printPrompt(LocalDateTime.now(), "SERVER", "channels in server: " + channels.toString(), fromServerInfo);
-				}
-				break;
-			}
-
-			case Message.CHANGE_TOPIC: {
-				ChangeTopicMessage msg = (ChangeTopicMessage)message;
-				printPrompt(LocalDateTime.now(), "SERVER", "channel topic is: " + msg.getTopic(), colorInfo);
-				break;
-			}
-
-			case Message.STATUS_MESSAGE: {
-				StatusMessage msg = (StatusMessage)message;
-				printPrompt(LocalDateTime.now(), "SERVER", "status: " + msg.getStatus(), colorInfo);
-				break;
-			}
-
-			case Message.ERROR_MESSAGE: {
-				ErrorMessage msg = (ErrorMessage)message;
-				printPrompt(LocalDateTime.now(), "SERVER", msg.getError(), colorError);
-				if (msg.requiresClientShutdown()) {
-					continueReceiving = false;
-					running = false;
-					println("\nPress enter", colorError);
-				}
-				break;
-			}
-
-			default:
-				println("Unknown message type from server.", colorError);
-				break;
-		}
-		printPrompt(LocalDateTime.now(), nick, "", colorMsg);
-		return continueReceiving;
-	}
-
-	@Override
-	public void connectionClosed() {
-		if (running) println("Connection closed", colorError);
-		running = false;
-	}
-
+    @Override
+    public void connectionClosed() {
+        SwingUtilities.invokeLater(() -> displayMessage("Connection closed", Color.RED));
+        running = false;
+    }
 }

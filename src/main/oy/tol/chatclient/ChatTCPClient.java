@@ -62,8 +62,12 @@ public class ChatTCPClient implements Runnable {
 
 	private synchronized void write(String message) {
 		// ChatClient.println("DEBUG OUT: " + message, ChatClient.colorError);
-		out.write(message + "\n");
-		out.flush();
+		//out.write(message + "\n");
+		if (out != null){
+			out.println(message);
+			out.flush();
+		}
+		
 	}
 
 	@Override
