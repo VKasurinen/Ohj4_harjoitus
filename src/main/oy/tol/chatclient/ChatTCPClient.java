@@ -32,13 +32,33 @@ public class ChatTCPClient implements Runnable {
 
 	private PrintWriter out;
 	private BufferedReader in;
+	private String nick;
 
 	ChatTCPClient(ChatClientDataProvider provider) {
 		dataProvider = provider;
+		nick = dataProvider.getNick();
 	}
 
 	public boolean isConnected() {
 		return running;
+	}
+
+	public synchronized void changeNick(String newNick) {
+		String currentNick = nick;
+		nick = newNick; // Update the local nickname
+	
+		
+		JSONObject nickChangeRequest = new JSONObject();
+		try {
+			nickChangeRequest.put("type", "NICK_CHANGE");
+			nickChangeRequest.put("newNick", newNick);
+			nickChangeRequest.put("oldNick", currentNick);
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+	
+		// Convert the JSON object to a string and send it to the server
+		write(nickChangeRequest.toString());
 	}
 
 	public synchronized void postChatMessage(String message) {

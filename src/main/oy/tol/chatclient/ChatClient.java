@@ -8,6 +8,7 @@ import static java.time.temporal.ChronoField.HOUR_OF_DAY;
 import static java.time.temporal.ChronoField.MINUTE_OF_HOUR;
 import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
 
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -16,7 +17,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+import oy.tol.chat.ChangeTopicMessage;
+import oy.tol.chat.ChatMessage;
+import oy.tol.chat.ErrorMessage;
+import oy.tol.chat.ListChannelsMessage;
 import oy.tol.chat.Message;
+import oy.tol.chat.StatusMessage;
+
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -24,6 +31,8 @@ import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.List;
+
 
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -32,12 +41,9 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
 
     private static final String SERVER = "localhost:10000";
 	private int serverPort = 10000;
-	private String currentChannel = "Main";
 	private String currentServer = SERVER;
-	private boolean running = true;
-
     private ChatTCPClient tcpClient = null;
-	private static final String nick = "Väinö";
+	private static String nick = "Väinö";
     private JTextArea chatArea;
     private JTextField inputField;
     private JButton sendButton;
@@ -48,15 +54,6 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
     private Map<String, String> channelTopics = new HashMap<>();
     private Map<String, StringBuilder> channelMessages = new HashMap<>();
     private JList<String> channelList;
-
-    private static final DateTimeFormatter timeFormatter = new DateTimeFormatterBuilder()
-			.appendValue(HOUR_OF_DAY, 2)
-			.appendLiteral(':')
-			.appendValue(MINUTE_OF_HOUR, 2)
-			.optionalStart()
-			.appendLiteral(':')
-			.appendValue(SECOND_OF_MINUTE, 2)
-			.toFormatter();
 
 
     public static void main(String[] args) {
@@ -81,7 +78,7 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
             tcpClient = new ChatTCPClient(this);
             new Thread(tcpClient).start();
         } catch (Exception e) {
-            displayMessage("Failed to run the ChatClient\nReason: " + e.getLocalizedMessage(), Color.RED);
+            displayMessage("Failed to run the ChatClient\nReason: " + e.getLocalizedMessage());
             e.printStackTrace();
             e.getMessage();
         }
@@ -96,7 +93,11 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                 setTitle("Swing Chat Client");
                 setDefaultCloseOperation(EXIT_ON_CLOSE);
                 setSize(800, 600);
+
+                setLocationRelativeTo(null);
+
                 channelTopics.put("Main", "Everything");
+                channelTopics.put("Odysseu", "Bot Channel");
 
                 //Creating menupanel to the left side.
                 JPanel menuPanel = new JPanel();
@@ -120,27 +121,37 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                         newChannel();
                     }
                 });
+
+                
                 //Channelbox code
-                //updateChannelLabels(currentChannel);
+                //updateChannelLabels(currentChannel)
                 channelListModel = new DefaultListModel<>();
-                channelListModel.addElement(currentChannel);
+                channelListModel.addElement("Main");
+                channelListModel.addElement("Odysseu");
+
+
                 channelList = new JList<>(channelListModel);
                 channelList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
                 JScrollPane listScrollPane = new JScrollPane(channelList);
-                
+
+                // if (channelList != null){
+                //     channelList.setSelectedValue("Main", true);
+                // }
+
 
                 channelList.addListSelectionListener(new ListSelectionListener() {
-                @Override
-                public void valueChanged(ListSelectionEvent e) {
-                    if (!e.getValueIsAdjusting()) {
-                        int selectedIndex = channelList.getSelectedIndex();
-                        if (selectedIndex >= 0 && selectedIndex < channelListModel.size()) {
-                            String selectedChannel = channelListModel.getElementAt(selectedIndex);
-                            updateChannelLabels(selectedChannel);
+                    @Override
+                    public void valueChanged(ListSelectionEvent e) {
+                        if (!e.getValueIsAdjusting()) {
+                            int selectedIndex = channelList.getSelectedIndex();
+                            if (selectedIndex >= 0 && selectedIndex < channelListModel.size()) {
+                                String selectedChannel = channelListModel.getElementAt(selectedIndex);
+                                updateChannelLabels(selectedChannel);
+                            }
                         }
                     }
-                }
                 });
+
 
 
                 menuPanel.add(button1);
@@ -151,7 +162,7 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
 
                 //Creating labels for channel topic and channel name. 
                 channeltopicLabel = new JLabel("Channel Topic: ");
-                channelNameLabel = new JLabel("Current Channel: "); // Replace with actual channel name
+                channelNameLabel = new JLabel("Current Channel: "); 
                 
                 //Putting the labels in a box so they can be next to each other.
                 JPanel labelsPanel = new JPanel();
@@ -203,12 +214,13 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                 JPanel inputPanel = new JPanel();
                 JPanel namePanel = new JPanel();
 
-                namLabel = new JLabel("Name: ");
+                namLabel = new JLabel(nick + " ");
                 namePanel.add(namLabel);
                 inputPanel.add(namePanel, BorderLayout.WEST);
                 inputPanel.add(inputField, BorderLayout.CENTER);
                 inputPanel.add(sendButton, BorderLayout.EAST);
                 add(inputPanel, BorderLayout.SOUTH);
+
 
                 setVisible(true);
 
@@ -259,9 +271,9 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
     
                 // Update labels
                 if (newChannelName.isEmpty()) {
-                    displayMessage("Error: Channel name cannot be empty", Color.RED);
+                    displayMessage("Error: Channel name cannot be empty");
                 } else if (newTopic.isEmpty()){
-                    displayMessage("Error: Channel topic cannot be empty", Color.RED);
+                    displayMessage("Error: Channel topic cannot be empty");
                 } else {
                     channelNameLabel.setText("Current Channel: " + newChannelName);
                     tcpClient.changeChannelTo(newChannelName);
@@ -291,7 +303,12 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
         channelPanel.add(saveButton);
     
         nameFrame.add(channelPanel);
+        nameFrame.setLocationRelativeTo(this);
         nameFrame.setVisible(true);
+
+        // if (chatArea != null) {
+        //     displayMessage("Opened New Channel Window"); // Example message
+        // }
 
     }
 
@@ -311,71 +328,50 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
     }
 
 
-    private void changeNick(String newNick){
-		namLabel.setText(newNick + ":");
-        
-	}
+    private void changeNick(String newNick) {
+        // Send the new nickname to the server
+        tcpClient.changeNick(newNick);
+    
+        // Update the local nickname
+        nick = newNick;
+    
+        // Update the name label
+        namLabel.setText(nick + ":");
+
+
+
+    }
 
     //method for changing nick
     private void openNameWindow() {
         JFrame nameFrame = new JFrame("Change Name");
         nameFrame.setSize(300, 150);
-    
+
         JPanel namePanel = new JPanel();
-        namePanel.setLayout(new FlowLayout(FlowLayout.LEFT)); 
-    
+        namePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+
         JLabel nameLabel = new JLabel("Enter new name: ");
         JTextField nameField = new JTextField(20);
         JButton saveButton = new JButton("Save");
-    
-        saveButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String newName = nameField.getText();
-                if (!newName.isEmpty()){
-                    changeNick(newName); 
-                    nameFrame.dispose();
-                } else {
-                    displayMessage("Error: Name cannot be empty", Color.RED);
-                }
-                    
-            } 
+
+        saveButton.addActionListener(e -> {
+            String newName = nameField.getText();
+            if (!newName.isEmpty()) {
+                changeNick(newName);
+                nameFrame.dispose();
+            } else {
+                displayMessage("Error: Name cannot be empty");
+            }
         });
-    
+
         namePanel.add(nameLabel);
         namePanel.add(nameField);
         namePanel.add(saveButton);
-    
+
         nameFrame.add(namePanel);
+        nameFrame.setLocationRelativeTo(this);
         nameFrame.setVisible(true);
     }
-
-    // private void sendMessage() {
-    //     String message = inputField.getText().trim();
-    //     if (!message.isEmpty()) {
-    //         if (nick != null) {
-    //             String selectedChannel = channelList.getSelectedValue();
-    //             if (selectedChannel == null){
-    //                 displayMessage("Error: No channel selected.", Color.RED);
-    //             } else {
-
-    //                 String currentTimeUTC = java.time.LocalTime.now(java.time.ZoneOffset.UTC).format(timeFormatter);
-    //                 //String formattedMessage = "[" + currentTimeUTC + "] " + message;
-    //                 String formattedMessage = message;
-
-
-    //                 StringBuilder channelMessageBuilder = channelMessages.getOrDefault(selectedChannel, new StringBuilder());
-    //                 channelMessageBuilder.append(formattedMessage).append("\n");
-    //                 channelMessages.put(selectedChannel, channelMessageBuilder);
-
-    //                 tcpClient.postChatMessage(formattedMessage);
-    //                 displayMessage(" " + formattedMessage, Color.BLACK);
-    //             }
-				
-    //         } 
-    //     } 
-    //     inputField.setText("");
-    // }
 
 
     private void sendMessage() {
@@ -384,20 +380,22 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
             if (nick != null) {
                 String selectedChannel = channelList.getSelectedValue();
                 if (selectedChannel == null) {
-                    displayMessage("Error: No channel selected.", Color.RED);
+                    displayMessage("Error: No channel selected.");
                 } else {
                     //String currentTimeUTC = java.time.LocalTime.now(java.time.ZoneOffset.UTC).format(timeFormatter);
                     ZoneId finnishTimeZone = ZoneId.of("Europe/Helsinki");
                     ZonedDateTime currentTimeZone = ZonedDateTime.now(finnishTimeZone);
                     String currentTimeFormatted = currentTimeZone.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
 
-                    String formattedMessage = "[" + currentTimeFormatted + "] " + message; // Include time locally
+                    //String formattedMessage = "[" + currentTimeFormatted + " & " + selectedChannel + "] " + nick + ": " + message; // Include time locally
+                    String formattedMessage = "[" + currentTimeFormatted + "] " +nick + ": "+message; 
+                    //String formattedMessage = "[" + currentTimeFormatted + "] " + message;
     
                     StringBuilder channelMessageBuilder = channelMessages.getOrDefault(selectedChannel, new StringBuilder());
                     channelMessageBuilder.append(formattedMessage).append("\n");
                     channelMessages.put(selectedChannel, channelMessageBuilder);
     
-                    displayMessage(formattedMessage, Color.BLACK); // Display message with time locally
+                    displayMessage(formattedMessage); // Display message with time locally
                     tcpClient.postChatMessage(message); // Send the message to the server
                 }
             }
@@ -409,9 +407,9 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
 
 
 
-    private void displayMessage(String message, Color color) {
+    private void displayMessage(String message) {
         chatArea.append(message + "\n");
-		
+        //chatArea.setForeground(color); // Set the text color
     }
 
     private void readConfiguration(String configFileName) throws FileNotFoundException, IOException {
@@ -453,13 +451,96 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
 
     @Override
     public boolean handleReceived(Message message) {
-        // Handle received messages and update GUI accordingly
-        return true;
+        boolean continueReceiving = true;
+    
+        switch (message.getType()) {
+            case Message.CHAT_MESSAGE: {
+                if (message instanceof ChatMessage) {
+                    ChatMessage msg = (ChatMessage) message;
+                    String sender = msg.getNick();
+                    String content = msg.getMessage();
+    
+                    // Get the current time in the desired format
+                    String currentTimeFormatted = LocalDateTime.now()
+                        .format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+    
+                    String formattedMessage = "[" + currentTimeFormatted + "] " + sender + " > " + content;
+                    displayMessage(formattedMessage);
+                }
+                continueReceiving = true;
+                break;
+            }
+    
+            case Message.LIST_CHANNELS: {
+                ListChannelsMessage msg = (ListChannelsMessage) message;
+                List<String> channels = msg.getChannels();
+    
+                if (channels != null) {
+                    StringBuilder channelListStr = new StringBuilder();
+                    for (String channel : channels) {
+                        channelListStr.append(channel).append(", ");
+                    }
+                    if (channelListStr.length() > 2) {
+                        // Remove the trailing ", " from the last channel
+                        channelListStr.setLength(channelListStr.length() - 2);
+                    }
+    
+                    String formattedMessage = "[" + LocalDateTime.now() + "] SERVER > channels in server: " + channelListStr.toString();
+                    displayMessage(formattedMessage);
+                }
+                continueReceiving = true;
+                break;
+            }
+    
+            case Message.CHANGE_TOPIC: {
+                ChangeTopicMessage msg = (ChangeTopicMessage) message;
+                String topic = msg.getTopic();
+                String formattedMessage = "[" + LocalDateTime.now() + "] SERVER > channel topic is: " + topic;
+                displayMessage(formattedMessage);
+                continueReceiving = true;
+                break;
+            }
+    
+            case Message.STATUS_MESSAGE: {
+                StatusMessage msg = (StatusMessage) message;
+                String status = msg.getStatus();
+                String formattedMessage = "[" + LocalDateTime.now() + "] SERVER > status: " + status;
+                displayMessage(formattedMessage);
+                continueReceiving = true;
+                break;
+            }
+    
+            case Message.ERROR_MESSAGE: {
+                try {
+                    ErrorMessage msg = (ErrorMessage) message;
+                String error = msg.getError();
+                String formattedMessage = "[" + LocalDateTime.now() + "] SERVER > " + error;
+                displayMessage(formattedMessage);
+                if (msg.requiresClientShutdown()) {
+                    running = false;
+                    continueReceiving = false;
+                }
+                } catch(Exception e){
+                    System.out.println(e.getMessage());
+                    e.printStackTrace();
+                }
+                
+                break;
+            }
+    
+            default:
+                displayMessage("Unknown message type from server.");
+                break;
+        }
+    
+        return continueReceiving;
     }
+    
+    
 
     @Override
     public void connectionClosed() {
-        SwingUtilities.invokeLater(() -> displayMessage("Connection closed", Color.RED));
+        SwingUtilities.invokeLater(() -> displayMessage("Connection closed"));
         running = false;
     }
 }
