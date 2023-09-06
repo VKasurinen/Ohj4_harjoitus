@@ -7,6 +7,9 @@ import java.io.IOException;
 import static java.time.temporal.ChronoField.HOUR_OF_DAY;
 import static java.time.temporal.ChronoField.MINUTE_OF_HOUR;
 import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
+
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.HashMap;
@@ -21,6 +24,9 @@ import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 
 public class ChatClient extends JFrame implements ChatClientDataProvider {
 
@@ -162,6 +168,7 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                 JScrollPane scrollPane = new JScrollPane(chatArea);
                 add(scrollPane, BorderLayout.CENTER);
 
+
                 inputField = new JTextField(30);
                 sendButton = new JButton("Send");
                 sendButton.addActionListener(new ActionListener() {
@@ -170,6 +177,27 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                         sendMessage();
                     }
                 });
+                
+                inputField.addKeyListener(new KeyListener() {
+                    @Override
+                    public void keyTyped(KeyEvent e) {
+                        // No need to use, but required by the KeyListener interface
+                    }
+                
+                    @Override
+                    public void keyPressed(KeyEvent e) {
+                        // In this method it checks if enter (keycode 10) is pressed 
+                        if (e.getKeyCode() == 10) {
+                            sendMessage();
+                        }
+                    }
+                
+                    @Override
+                    public void keyReleased(KeyEvent e) {
+                        // No need to use, but required by the KeyListener interface
+                    }
+                });
+
 
                 //Putting name label next to textfield
                 JPanel inputPanel = new JPanel();
@@ -192,11 +220,11 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
 
         //}    
 
-        if (tcpClient != null){
-                tcpClient.close();
-        }
+        // if (tcpClient != null){
+        //         tcpClient.close();
+        // }
 
-        System.out.println("Bye!");
+        //System.out.println("Bye!");
         
         
     }
@@ -322,33 +350,64 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
         nameFrame.setVisible(true);
     }
 
-	
-   
+    // private void sendMessage() {
+    //     String message = inputField.getText().trim();
+    //     if (!message.isEmpty()) {
+    //         if (nick != null) {
+    //             String selectedChannel = channelList.getSelectedValue();
+    //             if (selectedChannel == null){
+    //                 displayMessage("Error: No channel selected.", Color.RED);
+    //             } else {
+
+    //                 String currentTimeUTC = java.time.LocalTime.now(java.time.ZoneOffset.UTC).format(timeFormatter);
+    //                 //String formattedMessage = "[" + currentTimeUTC + "] " + message;
+    //                 String formattedMessage = message;
+
+
+    //                 StringBuilder channelMessageBuilder = channelMessages.getOrDefault(selectedChannel, new StringBuilder());
+    //                 channelMessageBuilder.append(formattedMessage).append("\n");
+    //                 channelMessages.put(selectedChannel, channelMessageBuilder);
+
+    //                 tcpClient.postChatMessage(formattedMessage);
+    //                 displayMessage(" " + formattedMessage, Color.BLACK);
+    //             }
+				
+    //         } 
+    //     } 
+    //     inputField.setText("");
+    // }
+
+
     private void sendMessage() {
         String message = inputField.getText().trim();
         if (!message.isEmpty()) {
             if (nick != null) {
                 String selectedChannel = channelList.getSelectedValue();
-                if (selectedChannel == null){
+                if (selectedChannel == null) {
                     displayMessage("Error: No channel selected.", Color.RED);
                 } else {
+                    //String currentTimeUTC = java.time.LocalTime.now(java.time.ZoneOffset.UTC).format(timeFormatter);
+                    ZoneId finnishTimeZone = ZoneId.of("Europe/Helsinki");
+                    ZonedDateTime currentTimeZone = ZonedDateTime.now(finnishTimeZone);
+                    String currentTimeFormatted = currentTimeZone.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
 
-                    String currentTimeUTC = java.time.LocalTime.now(java.time.ZoneOffset.UTC).format(timeFormatter);
-                    String formattedMessage = "[" + currentTimeUTC + "] You: " + message;
-
-
+                    String formattedMessage = "[" + currentTimeFormatted + "] " + message; // Include time locally
+    
                     StringBuilder channelMessageBuilder = channelMessages.getOrDefault(selectedChannel, new StringBuilder());
                     channelMessageBuilder.append(formattedMessage).append("\n");
                     channelMessages.put(selectedChannel, channelMessageBuilder);
-
-                    tcpClient.postChatMessage(formattedMessage);
-                    displayMessage(" " + formattedMessage, Color.BLACK);
+    
+                    displayMessage(formattedMessage, Color.BLACK); // Display message with time locally
+                    tcpClient.postChatMessage(message); // Send the message to the server
                 }
-				
-            } 
-        } 
+            }
+        }
         inputField.setText("");
     }
+    
+
+
+
 
     private void displayMessage(String message, Color color) {
         chatArea.append(message + "\n");
