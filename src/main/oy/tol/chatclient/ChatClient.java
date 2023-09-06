@@ -54,6 +54,7 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
     private Map<String, String> channelTopics = new HashMap<>();
     private Map<String, StringBuilder> channelMessages = new HashMap<>();
     private JList<String> channelList;
+    private boolean running = true;
 
 
     public static void main(String[] args) {
