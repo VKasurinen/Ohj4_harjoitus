@@ -1,9 +1,13 @@
 package oy.tol.chatclient;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
 import static java.time.temporal.ChronoField.HOUR_OF_DAY;
 import static java.time.temporal.ChronoField.MINUTE_OF_HOUR;
 import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
@@ -86,10 +90,6 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
     }
 
 	private void initUI() {
-
-
-        //while (tcpClient.isConnected()) {
-            //System.out.println("whilen sisäl");
             try {
                 setTitle("Swing Chat Client");
                 setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -152,8 +152,6 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                         }
                     }
                 });
-
-
 
                 menuPanel.add(button1);
                 menuPanel.add(button2);
@@ -229,24 +227,13 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
 
             } catch (Exception e){
                 System.out.println("Error : " + e.getMessage());
-            }
-
-        //}    
-
-        // if (tcpClient != null){
-        //         tcpClient.close();
-        // }
-
-        //System.out.println("Bye!");
-        
+            }     
         
     }
 
     public void displayGUI() {
         SwingUtilities.invokeLater(() -> setVisible(true));
     }
-
-
 
     //method for creating new channel and topic
     private void newChannel(){
@@ -292,7 +279,6 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
     
                     nameFrame.dispose();
                 }
-                //updateChannelLabels(newChannelName);
     
             }
         });
@@ -307,11 +293,9 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
         nameFrame.setLocationRelativeTo(this);
         nameFrame.setVisible(true);
 
-        // if (chatArea != null) {
-        //     displayMessage("Opened New Channel Window"); // Example message
-        // }
-
     }
+
+
 
     private void updateChannelLabels(String selectedChannel) {
         
@@ -338,9 +322,6 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
     
         // Update the name label
         namLabel.setText(nick + ":");
-
-
-
     }
 
     //method for changing nick
@@ -374,7 +355,8 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
         nameFrame.setVisible(true);
     }
 
-
+    
+    
     private void sendMessage() {
         String message = inputField.getText().trim();
         if (!message.isEmpty()) {
@@ -388,7 +370,6 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                     ZonedDateTime currentTimeZone = ZonedDateTime.now(finnishTimeZone);
                     String currentTimeFormatted = currentTimeZone.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
 
-                    //String formattedMessage = "[" + currentTimeFormatted + " & " + selectedChannel + "] " + nick + ": " + message; // Include time locally
                     String formattedMessage = "[" + currentTimeFormatted + "] " +nick + ": "+message; 
                     //String formattedMessage = "[" + currentTimeFormatted + "] " + message;
     
@@ -404,9 +385,6 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
         inputField.setText("");
     }
     
-
-
-
 
     private void displayMessage(String message) {
         chatArea.append(message + "\n");
@@ -455,6 +433,30 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
         boolean continueReceiving = true;
     
         switch (message.getType()) {
+            // case Message.CHAT_MESSAGE: {
+            //     if (message instanceof ChatMessage) {
+            //         ChatMessage msg = (ChatMessage) message;
+            //         String sender = msg.getNick();
+            //         String content = msg.getMessage();
+            
+            //         // Get the current time in the desired format
+            //         String currentTimeFormatted = LocalDateTime.now()
+            //             .format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+            
+            //         String formattedMessage;
+            
+            //         if (msg.isDirectMessage()) {
+            //             formattedMessage = "[" + currentTimeFormatted + "] [private] " + sender + " > " + content;
+            //             // Handle private messages differently (e.g., change color or display differently)
+            //             displayMessage(formattedMessage);
+            //         } else {
+            //             formattedMessage = "[" + currentTimeFormatted + "] " + sender + " > " + content;
+            //             displayMessage(formattedMessage);
+            //         }
+            //     }
+            //     continueReceiving = true;
+            //     break;
+            // }
             case Message.CHAT_MESSAGE: {
                 if (message instanceof ChatMessage) {
                     ChatMessage msg = (ChatMessage) message;
@@ -536,8 +538,6 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
     
         return continueReceiving;
     }
-    
-    
 
     @Override
     public void connectionClosed() {
