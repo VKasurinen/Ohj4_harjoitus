@@ -97,8 +97,8 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
 
                 setLocationRelativeTo(null);
 
-                channelTopics.put("Main", "Everything");
-                channelTopics.put("Odysseu", "Bot Channel");
+                channelTopics.put("main", "Everything");
+                channelTopics.put("odysseu", "Bot Channel");
 
                 //Creating menupanel to the left side.
                 JPanel menuPanel = new JPanel();
@@ -127,19 +127,25 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                 //Channelbox code
                 //updateChannelLabels(currentChannel)
                 channelListModel = new DefaultListModel<>();
-                channelListModel.addElement("Main");
-                channelListModel.addElement("Odysseu");
+                channelListModel.addElement("main");
+                channelListModel.addElement("odysseu");
+
+                //initializing chatarea for sending messages
+                chatArea = new JTextArea();
+                chatArea.setEditable(false);
+                JScrollPane scrollPane = new JScrollPane(chatArea);
+                add(scrollPane, BorderLayout.CENTER);
 
 
                 channelList = new JList<>(channelListModel);
                 channelList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
                 JScrollPane listScrollPane = new JScrollPane(channelList);
 
-                // if (channelList != null){
-                //     channelList.setSelectedValue("Main", true);
-                // }
-
-
+                if (channelList != null){
+                    channelList.setSelectedValue("main", true);
+                    tcpClient.changeChannelTo("main");
+                }
+                
                 channelList.addListSelectionListener(new ListSelectionListener() {
                     @Override
                     public void valueChanged(ListSelectionEvent e) {
@@ -148,6 +154,13 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                             if (selectedIndex >= 0 && selectedIndex < channelListModel.size()) {
                                 String selectedChannel = channelListModel.getElementAt(selectedIndex);
                                 updateChannelLabels(selectedChannel);
+                
+                                // Notify the server about the channel change
+                                tcpClient.changeChannelTo(selectedChannel);
+                
+                                // Call changeTopicTo to update the server with the new topic
+                                String selectedTopic = channelTopics.get(selectedChannel);
+                                tcpClient.changeTopicTo(selectedTopic);
                             }
                         }
                     }
@@ -172,11 +185,11 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                 labelsPanel.setBorder(BorderFactory.createEmptyBorder(10, 150, 0, 0)); // Adding padding
                 add(labelsPanel, BorderLayout.NORTH);
 
-                //initializing chatarea for sending messages
-                chatArea = new JTextArea();
-                chatArea.setEditable(false);
-                JScrollPane scrollPane = new JScrollPane(chatArea);
-                add(scrollPane, BorderLayout.CENTER);
+                // //initializing chatarea for sending messages
+                // chatArea = new JTextArea();
+                // chatArea.setEditable(false);
+                // JScrollPane scrollPane = new JScrollPane(chatArea);
+                // add(scrollPane, BorderLayout.CENTER);
 
 
                 inputField = new JTextField(30);
@@ -433,30 +446,6 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
         boolean continueReceiving = true;
     
         switch (message.getType()) {
-            // case Message.CHAT_MESSAGE: {
-            //     if (message instanceof ChatMessage) {
-            //         ChatMessage msg = (ChatMessage) message;
-            //         String sender = msg.getNick();
-            //         String content = msg.getMessage();
-            
-            //         // Get the current time in the desired format
-            //         String currentTimeFormatted = LocalDateTime.now()
-            //             .format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-            
-            //         String formattedMessage;
-            
-            //         if (msg.isDirectMessage()) {
-            //             formattedMessage = "[" + currentTimeFormatted + "] [private] " + sender + " > " + content;
-            //             // Handle private messages differently (e.g., change color or display differently)
-            //             displayMessage(formattedMessage);
-            //         } else {
-            //             formattedMessage = "[" + currentTimeFormatted + "] " + sender + " > " + content;
-            //             displayMessage(formattedMessage);
-            //         }
-            //     }
-            //     continueReceiving = true;
-            //     break;
-            // }
             case Message.CHAT_MESSAGE: {
                 if (message instanceof ChatMessage) {
                     ChatMessage msg = (ChatMessage) message;
@@ -473,6 +462,8 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                 continueReceiving = true;
                 break;
             }
+            
+            
     
             case Message.LIST_CHANNELS: {
                 ListChannelsMessage msg = (ListChannelsMessage) message;

@@ -42,24 +42,6 @@ public class ChatTCPClient implements Runnable {
 	public boolean isConnected() {
 		return running;
 	}
-
-	// public synchronized void postChatMessageToBotChannel(String message, String channel) {
-	// 	if (message != null && !message.isEmpty()) {
-	// 		String userName = dataProvider.getNick();
-			
-	// 		// Modify the sender's name to indicate it's a bot message
-	// 		userName = "Bot: " + userName;
-			
-	// 		ChatMessage msg = new ChatMessage(LocalDateTime.now(), userName, message);
-	
-	// 		// Add the channel information to the message JSON
-	// 		JSONObject messageJson = new JSONObject(msg.toJSON());
-	// 		messageJson.put("channel", channel);
-	
-	// 		String jsonObjectString = messageJson.toString();
-	// 		write(jsonObjectString);
-	// 	}
-	// }
 	
 	public synchronized void changeNick(String newNick) {
 		String currentNick = nick;
