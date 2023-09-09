@@ -357,7 +357,7 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
     /**
      * opening new frame for chaning nickname and then calling changenick.
      */
-    
+
     // method for changing nick
     private void openNameWindow() {
         JFrame nameFrame = new JFrame("Change Name");
@@ -403,7 +403,6 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                 if (selectedChannel == null) {
                     displayMessage("Error: No channel selected.");
                 } else {
-                    // String currentTimeUTC =
                     // java.time.LocalTime.now(java.time.ZoneOffset.UTC).format(timeFormatter);
                     ZoneId finnishTimeZone = ZoneId.of("Europe/Helsinki");
                     ZonedDateTime currentTimeZone = ZonedDateTime.now(finnishTimeZone);
