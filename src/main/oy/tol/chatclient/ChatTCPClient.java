@@ -61,6 +61,7 @@ public class ChatTCPClient implements Runnable {
 		write(nickChangeRequest.toString());
 	}
 
+
 	public synchronized void postChatMessage(String message) {
 		String userName = dataProvider.getNick();
 		String recipientNick = null;
