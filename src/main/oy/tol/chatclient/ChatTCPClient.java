@@ -42,6 +42,8 @@ public class ChatTCPClient implements Runnable {
 	public boolean isConnected() {
 		return running;
 	}
+
+	//Added changeNick method for chaning nickname
 	
 	public synchronized void changeNick(String newNick) {
 		String currentNick = nick;

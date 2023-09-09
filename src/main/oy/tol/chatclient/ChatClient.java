@@ -297,11 +297,8 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                     // Update channelListModel
                     channelListModel.addElement(newChannelName);
                     channelTopics.put(newChannelName, newTopic);
-
                     channelMessages.put(newChannelName, new StringBuilder());
-
                     chatArea.setText("");
-
                     nameFrame.dispose();
                 }
 
@@ -325,6 +322,7 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
      * 
      * @param selectedChannel
      */
+
     private void updateChannelLabels(String selectedChannel) {
 
         String selectedTopic = channelTopics.get(selectedChannel);
@@ -359,6 +357,7 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
     /**
      * opening new frame for chaning nickname and then calling changenick.
      */
+    
     // method for changing nick
     private void openNameWindow() {
         JFrame nameFrame = new JFrame("Change Name");
