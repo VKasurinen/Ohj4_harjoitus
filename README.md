@@ -8,13 +8,19 @@ This is my chat client app from programming 4 course where I implemented all the
 Graphical user interface where you can communicate with others. It also has a bot channel where server sends text to the client. 
 Here are examples of the program:
 ![Chat client](chatclient2.png)
+
 You can write messages to your friends
 
 ![New Channel](changeChannel.png)
+
 You can also create a new channel where you can discuss about different topics.
 
 ![New Name](changeName.png)
+
 You can change your nickname and it sends the new nickname to the server.
+
+Lastly here is example about the bot channel called "odysseu".
+![Bot Channel](botChannel.png)
 
 
 The O4-server is a chat server with the following main properties:
