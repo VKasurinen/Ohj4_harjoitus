@@ -347,7 +347,7 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
 
     private void changeNick(String newNick) {
         // Send the new nickname to the server
-        tcpClient.changeNick(newNick);
+        //tcpClient.changeNick(newNick);
 
         // Update the local nickname
         nick = newNick;
