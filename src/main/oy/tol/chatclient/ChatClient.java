@@ -265,35 +265,36 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
     private void newChannel() {
         JFrame nameFrame = new JFrame("Change channel name");
         nameFrame.setSize(300, 175);
-
+    
         JPanel channelPanel = new JPanel();
         channelPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-
+    
         JLabel channelLabel = new JLabel("Enter new channel name: ");
         JTextField channelField = new JTextField(20);
-
+    
         JLabel topicLabel = new JLabel("Enter new channel topic: ");
         JTextField topicField = new JTextField(20);
-
+    
         JButton saveButton = new JButton("Save");
-
+    
         saveButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String newChannelName = channelField.getText();
                 String newTopic = topicField.getText();
-
-                // Update labels
-                if (newChannelName.isEmpty()) {
-                    displayMessage("Error: Channel name cannot be empty");
-                } else if (newTopic.isEmpty()) {
-                    displayMessage("Error: Channel topic cannot be empty");
+    
+                if (newChannelName.isEmpty() || newTopic.isEmpty()) {
+                    // Show an alert dialog if either the channel name or topic is empty
+                    JOptionPane.showMessageDialog(nameFrame,
+                            "Channel name and topic cannot be empty. Please provide both.",
+                            "Error", JOptionPane.ERROR_MESSAGE);
                 } else {
+                    // Update labels
                     channelNameLabel.setText("Current Channel: " + newChannelName);
                     tcpClient.changeChannelTo(newChannelName);
                     channeltopicLabel.setText("Channel Topic: " + newTopic);
                     tcpClient.changeTopicTo(newTopic);
-
+    
                     // Update channelListModel
                     channelListModel.addElement(newChannelName);
                     channelTopics.put(newChannelName, newTopic);
@@ -301,21 +302,22 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
                     chatArea.setText("");
                     nameFrame.dispose();
                 }
-
             }
         });
-
+    
         channelPanel.add(channelLabel);
         channelPanel.add(channelField);
         channelPanel.add(topicLabel);
         channelPanel.add(topicField);
         channelPanel.add(saveButton);
-
+    
         nameFrame.add(channelPanel);
         nameFrame.setLocationRelativeTo(this);
         nameFrame.setVisible(true);
-
     }
+    
+
+
 
     /**
      * Upating channel labels for the program.
@@ -362,28 +364,31 @@ public class ChatClient extends JFrame implements ChatClientDataProvider {
     private void openNameWindow() {
         JFrame nameFrame = new JFrame("Change Name");
         nameFrame.setSize(300, 150);
-
+    
         JPanel namePanel = new JPanel();
         namePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-
+    
         JLabel nameLabel = new JLabel("Enter new name: ");
         JTextField nameField = new JTextField(20);
         JButton saveButton = new JButton("Save");
-
+    
         saveButton.addActionListener(e -> {
             String newName = nameField.getText();
             if (!newName.isEmpty()) {
                 changeNick(newName);
                 nameFrame.dispose();
             } else {
-                displayMessage("Error: Name cannot be empty");
+                // Show an alert dialog if the new name is empty
+                JOptionPane.showMessageDialog(nameFrame,
+                        "Name cannot be empty. Please provide a name.",
+                        "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
-
+    
         namePanel.add(nameLabel);
         namePanel.add(nameField);
         namePanel.add(saveButton);
-
+    
         nameFrame.add(namePanel);
         nameFrame.setLocationRelativeTo(this);
         nameFrame.setVisible(true);
